@@ -22,7 +22,7 @@ int16_t 	*i2c_rx_buffer,*spi_rx_buffer;
 int16_t 	spi_dato,i2c_dato;
 uint16_t	spi_addres,i2c_addres;
 // Analog sensor variable ----------------------------------------------------*/
-uint32_t 	analog_data = 0,temp =0,tens;
+uint32_t 	analog_data = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 /* Initialization private function -------------------------------------------*/
@@ -54,20 +54,6 @@ Bool isValidID (uint8_t ID,uint16_t *index)
 		}
 	return FALSE;
 }
-
-
-////ATTENZIONE SU QUESTA FUZNZIONE NUTRO FORTI DUBBI CHE FUNZIONERA'
-////DA VEDERE BENE DEBUG
-//OP_STATE getSensorID (uint8_t ID,Uint16_t sensorID)
-//{
-//	uint16_t i = 0;
-//
-//	if(isValidID(ID,&i) == TRUE){
-//		sensor = &sensorlist[i];
-//		return OP_OK;
-//	}else return OP_ERR_ID;
-//}
-
 
 
 /*###############################################################################*/
@@ -306,6 +292,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 			sensorlist[i].dataread = FALSE;
 			break;
 		}
+	}
+
+	if(HAL_ADC_Start_IT(&hadc1) != HAL_OK)
+	{
+		errorHandler();
 	}
 }
 
