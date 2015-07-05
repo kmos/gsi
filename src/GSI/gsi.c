@@ -151,6 +151,13 @@ OP_STATE initSensors (void)
 
 #endif
 
+#ifdef ADC_SENSOR_ENABLED
+	if(HAL_ADC_Start_IT(&hadc1) != HAL_OK)
+	{
+		errorHandler();
+	}
+#endif
+
 	return OP_OK;
 }
 
@@ -172,13 +179,14 @@ OP_STATE readData (uint8_t ID,Data *data)
 		}
 	}else if(sensorlist[sensorID].link == Analog){
 
-			if(HAL_ADC_Start_IT(&hadc1) != HAL_OK)
-			{
-				errorHandler();//In questo caso dovrei aggiungere la gestione degli errori
+			if(sensorlist[sensorID].dataread == TRUE){
+				return OP_ERR_OVERUN;
 			}else{
-				//while(sensorlist[sensorID].dataread == FALSE) __NOP(); //Faccio una cosa un pò bloccante ma il DMA???
+				data->value = sensorlist[sensorID].lastData.value;
 				sensorlist[sensorID].dataread = FALSE;
 			}
+
+
 	}else if(sensorlist[sensorID].link == CATE){
 		//To future implementation
 	}
@@ -287,15 +295,15 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
 	int16_t i = 0;
 
-	//BSP_LED_Toggle(LED6);
 	analog_data=HAL_ADC_GetValue(hadc);
 	analog_data-= Calibration_Value;
+
 
 	for(i=0;i<SENSOR_NUMBER;i++)
 	{
 		if(sensorlist[i].link == Analog){
 			sensorlist[i].lastData.value = analog_data;
-			sensorlist[i].dataread = TRUE;
+			sensorlist[i].dataread = FALSE;
 			break;
 		}
 	}
