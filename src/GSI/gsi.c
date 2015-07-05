@@ -137,14 +137,14 @@ OP_STATE initSensors (void)
 
 
 #ifdef I2C_SENSOR_ENABLED
-	if(HAL_I2C_Slave_Receive_IT(&hi2c3,i2c_rx_buffer,sizeof(uint16_t)) != HAL_OK)
+	if(HAL_I2C_Slave_Receive_IT(&hi2c3,i2c_rx_buffer,sizeof(uint16_t)*2) != HAL_OK)
 	{
 		errorHandler();
 	}
 #endif
 
 #ifdef SPI_SENSOR_ENABLED
-	if(HAL_SPI_Receive_IT(&hspi2,spi_rx_buffer,sizeof(uint16_t)) != HAL_OK)
+	if(HAL_SPI_Receive_IT(&hspi2,(uint16_t *)spi_rx_buffer,sizeof(uint16_t)) != HAL_OK)
 	{
 		errorHandler();
 	}
@@ -249,7 +249,7 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 	}
 
 	//BSP_LED_Toggle(LED4);
-	if(HAL_SPI_Receive_IT(&hspi2,spi_rx_buffer,sizeof(uint16_t)) != HAL_OK)
+	if(HAL_SPI_Receive_IT(&hspi2,(uint16_t *)spi_rx_buffer,sizeof(uint16_t)) != HAL_OK)
 	{
 		//qui va la logica applicattiva di gestione degli
 		errorHandler();
@@ -272,7 +272,7 @@ void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
 	}
 
 	//BSP_LED_Toggle(LED3);
-	if(HAL_I2C_Slave_Receive_IT(&hi2c,i2c_rx_buffer,sizeof(uint16_t)*2) != HAL_OK)
+	if(HAL_I2C_Slave_Receive_IT(&hi2c3,i2c_rx_buffer,sizeof(uint16_t)*2) != HAL_OK)
 	{
 		errorHandler();
 	}
@@ -338,19 +338,19 @@ void MX_I2C3_Init(void)
 void MX_SPI2_Init(void)
 {
 
-  hspi2.Instance 				= SPI2;
-  hspi2.Init.Mode 				= SPI_MODE_SLAVE;
-  hspi2.Init.Direction 			= SPI_DIRECTION_1LINE;
-  hspi2.Init.DataSize 			= SPI_DATASIZE_8BIT;
-  hspi2.Init.CLKPolarity 		= SPI_POLARITY_LOW;
-  hspi2.Init.CLKPhase 			= SPI_PHASE_1EDGE;
-  hspi2.Init.NSS 				= SPI_NSS_SOFT;
-  hspi2.Init.BaudRatePrescaler 	= SPI_BAUDRATEPRESCALER_2;
-  hspi2.Init.FirstBit 			= SPI_FIRSTBIT_LSB;
-  hspi2.Init.TIMode 			= SPI_TIMODE_DISABLED;
-  hspi2.Init.CRCCalculation 	= SPI_CRCCALCULATION_DISABLED;
-  hspi2.Init.CRCPolynomial		= 0;
-  HAL_SPI_Init(&hspi2);
+	hspi2.Instance 				= SPI2;
+	hspi2.Init.Mode 			= SPI_MODE_SLAVE;
+	hspi2.Init.Direction 		= SPI_DIRECTION_1LINE;
+	hspi2.Init.DataSize 		= SPI_DATASIZE_16BIT;
+	hspi2.Init.CLKPolarity 		= SPI_POLARITY_HIGH;
+	hspi2.Init.CLKPhase 		= SPI_PHASE_1EDGE;
+	hspi2.Init.NSS 				= SPI_NSS_SOFT;
+	hspi2.Init.BaudRatePrescaler= SPI_BAUDRATEPRESCALER_2;
+	hspi2.Init.FirstBit 		= SPI_FIRSTBIT_MSB;
+	hspi2.Init.TIMode 			= SPI_TIMODE_DISABLED;
+	hspi2.Init.CRCCalculation 	= SPI_CRCCALCULATION_DISABLED;
+	hspi2.Init.CRCPolynomial	= 0;
+	HAL_SPI_Init(&hspi2);
 
 }
 
