@@ -31,7 +31,7 @@ void MemManage_Handler	(void);
 void I2C3_ER_IRQHandler	(void);
 void I2C3_EV_IRQHandler	(void);
 void SPI2_IRQHandler	(void);
-
+void DMA2_Stream0_IRQHandler(void);
 #ifdef __cplusplus
 }
 #endif

@@ -288,7 +288,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 	for(i=0;i<SENSOR_NUMBER;i++)
 	{
 		if(sensorlist[i].link == Analog){
-			sensorlist[i].lastData.value = analog_data;
+			sensorlist[i].lastData.value = (uint16_t) analog_data;
 			sensorlist[i].dataread = FALSE;
 			break;
 		}
@@ -381,7 +381,7 @@ void MX_ADC1_Init(void)
 	*/
 	sConfig.Channel = ADC_CHANNEL_0;
 	sConfig.Rank = 1;
-	sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+	sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
 	HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 
 }
