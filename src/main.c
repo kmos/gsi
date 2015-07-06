@@ -30,7 +30,7 @@
 #pragma GCC diagnostic ignored "-Wmissing-declarations"
 #pragma GCC diagnostic ignored "-Wreturn-type"
 
-
+//Modifica di prova
 
 /* Private variables ---------------------------------------------------------*/
 Data data;
