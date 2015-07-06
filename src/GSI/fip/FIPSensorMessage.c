@@ -12,13 +12,23 @@ int createFIPSensorMessage(SensorMessageParameters params, FIPMessage**fm) {
 	FIPMessage *fipSensorMessage = *fm;
 	fipSensorMessage->header = read_sensor;
 	switch (params.operation) {
-	case sensor_one_read | sensor_lists | sensor_unregist_periodic_read
-			| sensor_unregist_periodic_read:
+	case sensor_one_read ://|  sensor_lists | sensor_unregist_periodic_read:
 		fipSensorMessage->length = sizeof(uint8_t) + sizeof(uint64_t);
 		fipSensorMessage->payload = malloc(fipSensorMessage->length);
 		fipSensorMessage->payload[0] = params.operation;
-		memcpy(fipSensorMessage->payload + sizeof(uint8_t), &params.sensorMask,
-				sizeof(uint64_t));
+		memcpy(fipSensorMessage->payload + sizeof(uint8_t), &params.sensorMask,sizeof(uint64_t));
+		break;
+	case sensor_lists:
+		fipSensorMessage->length = sizeof(uint8_t) + sizeof(uint64_t);
+		fipSensorMessage->payload = malloc(fipSensorMessage->length);
+		fipSensorMessage->payload[0] = params.operation;
+		memcpy(fipSensorMessage->payload + sizeof(uint8_t), &params.sensorMask,	sizeof(uint64_t));
+		break;
+	case sensor_unregist_periodic_read:
+		fipSensorMessage->length = sizeof(uint8_t) + sizeof(uint64_t);
+		fipSensorMessage->payload = malloc(fipSensorMessage->length);
+		fipSensorMessage->payload[0] = params.operation;
+		memcpy(fipSensorMessage->payload + sizeof(uint8_t), &params.sensorMask,	sizeof(uint64_t));
 		break;
 	case sensor_periodic_read:
 		fipSensorMessage->length = sizeof(uint8_t) + sizeof(uint64_t)
