@@ -23,7 +23,7 @@ typedef enum {
 struct TerminalMessageParameters {
 	TerminalOperation operation;
 	uint8_t* text_buffer;
-	uint16_t text_lenght
+	uint16_t text_lenght;
 };
 typedef struct TerminalMessageParameters TerminalMessageParameters;
 

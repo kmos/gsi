@@ -40,7 +40,7 @@ static void MX_SPI2_Init(void);
 static void MX_ADC1_Init(void);
 /* Logical private function --------------------------------------------------*/
 Bool 	 isValidID (uint8_t ID,uint16_t *index);
-float 	 fipRead   ();
+float 	 fipRead   (Class_Type);
 
 //Prevedere delle funzioni che fanno il controllo iniziale della lista
 
@@ -64,7 +64,7 @@ Bool isValidID (uint8_t ID,uint16_t *index)
 
 
 /* Read Data from CATA -----------------------------------------------------------*/
-float fipRead()
+float fipRead(Class_Type class)
 {
 	//Variable Declaration
 	uint8_t disp_res = 0;
@@ -72,15 +72,34 @@ float fipRead()
 	float readData = 0;
 
 	SensorMessageParameters fipParamsSensor;
-	//TerminalMessageParameters fipParamsTerminal;
+	TerminalMessageParameters fipParamsTerminal;
 
 	fipParamsSensor.operation = sensor_one_read ;
-	fipParamsSensor.sensorMask = SENSOR_MASK_ACCELERATOR_X ;
+	switch(class){
+		case Position:
+			fipParamsSensor.sensorMask = SENSOR_MASK_PROXIMITY ;
+			break;
+		case Optical:
+			fipParamsSensor.sensorMask = SENSOR_MASK_LIGHT ;
+			break;
+		case Mechanical:
+			fipParamsSensor.sensorMask = SENSOR_MASK_ACCELERATOR_X ;
+			break;
+		case Electromagnetic:
+			fipParamsSensor.sensorMask = SENSOR_MASK_MAGNETIC_X;
+			break;
+		case Pressure:
+			fipParamsSensor.sensorMask = SENSOR_MASK_PRESSURE;
+			break;
+		case Humidity:
+			fipParamsSensor.sensorMask = SENSOR_HUMIDITY;
+			break;
 
+	}
 	createFIPSensorMessage(fipParamsSensor, &requestSensor);
 
-//	fipParamsTerminal.operation = terminal_print;
-//	fipParamsTerminal.text_buffer = (uint8_t*) malloc(256 * sizeof(uint8_t));
+	fipParamsTerminal.operation = terminal_print;
+	fipParamsTerminal.text_buffer = (uint8_t*) malloc(256 * sizeof(uint8_t));
 
 	receivingBuffer = (uint8_t*) malloc(sizeof(uint8_t) * 64);
 	sendingBuffer   = (uint8_t*) malloc(sizeof(uint8_t) * 64);
@@ -95,23 +114,42 @@ float fipRead()
 
 	dequeueMessage(&response);
 
-	//fipParamsTerminal.text_lenght = sprintf(fipParamsTerminal.text_buffer,"Light Value: %f", getLight(response));
-//
-//	createFIPTerminalMessage(fipParamsTerminal, &printTerminal);
-//	packetSize = serializeFIPMessage(printTerminal, sendingBuffer);
-//	VCP_write(sendingBuffer, packetSize);
+	switch(class){
+		case Position:
+			readData = getProximity(response);
+			break;
+		case Optical:
+			readData = getLight(response);
+			break;
+		case Mechanical:
+			readData = getAcceleratorX(response);
+			break;
+		case Electromagnetic:
+			readData = getMagneticX(response);
+			break;
+		case Pressure:
+			readData = getPressure(response);
+			break;
+		case Humidity:
+			readData = getHumidity(response);
+			break;
 
-	//reading accelerator
+	}
 
-	 readData = getAcceleratorX(response);
+	fipParamsTerminal.text_lenght = sprintf(fipParamsTerminal.text_buffer,"Light Value: %f", getLight(response));
 
-	 //dealocation
-	 free(receivingBuffer);
-	 free(sendingBuffer);
-	 destroyFIPMessage(response);
-	 destroyFIPMessage(printTerminal);
+	createFIPTerminalMessage(fipParamsTerminal, &printTerminal);
+	packetSize = serializeFIPMessage(printTerminal, sendingBuffer);
+	VCP_write(sendingBuffer, packetSize);
 
-	 return readData;
+
+	//dealocation
+	free(receivingBuffer);
+	free(sendingBuffer);
+	destroyFIPMessage(response);
+	destroyFIPMessage(printTerminal);
+
+	return readData;
 }
 
 
@@ -247,7 +285,7 @@ OP_STATE readData (uint8_t ID,Data *data)
 
 
 	}else if(sensorlist[sensorID].link == CATE){
-				sensorlist[sensorID].lastData.value = (int16_t) fipRead();//Non va bene cosi
+				sensorlist[sensorID].lastData.value = (int16_t) fipRead(sensorlist[sensorID].sensor_class);
 	}
 
 	return OP_OK;
