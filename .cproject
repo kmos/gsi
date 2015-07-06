@@ -70,6 +70,9 @@
 									<listOptionValue builtIn="false" value="&quot;../system/include/cmsis&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;../system/include/stm32f4-hal&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/gsi/src/GSI}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/GSIproject/src/GSI/fip}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/GSIproject/src/GSI/usb/CDC/Inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/GSIproject/src/GSI/usb/Core/Inc}&quot;"/>
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs.830212401" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="DEBUG"/>
@@ -383,13 +386,13 @@
 	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.2083526403;ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.2083526403.;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.292263630;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.1879470266">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.259217674;ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.259217674.;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.131046724;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.1962267898">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.259217674;ilg.gnuarmeclipse.managedbuild.cross.config.elf.debug.259217674.;ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1892347045;ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.input.1415355710">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.2083526403;ilg.gnuarmeclipse.managedbuild.cross.config.elf.release.2083526403.;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.292263630;ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.1879470266">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 	</storageModule>

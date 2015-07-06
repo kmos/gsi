@@ -84,7 +84,7 @@ typedef struct {
 	uint32_t	  		period_ms;
 	Bool 				dataread;
 	Data 		  		lastData;
-} Sensor;
+} GSI_Sensor;
 
 
 

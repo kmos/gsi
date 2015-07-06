@@ -5,44 +5,51 @@
  *      Author: ntonjeta
  */
 
-#include "gsi_config.h"
+//#include "gsi_config.h"
 #include "gsi.h"
 
 /* Private variables ---------------------------------------------------------*/
-Sensor sensorlist[SENSOR_NUMBER];
+GSI_Sensor sensorlist[SENSOR_NUMBER];
 
 /* Peripheral Handle varibles ------------------------------------------------*/
 I2C_HandleTypeDef hi2c3;
 SPI_HandleTypeDef hspi2;
 ADC_HandleTypeDef hadc1;
+USBD_HandleTypeDef USBD_Device;
 
+// DA FARE ALLOCCAZIONE DEALLOCAZIONE DEI BUFFER
 // RX Buffer I2C SPI ---------------------------------------------------------*/
 int16_t 	*i2c_rx_buffer,*spi_rx_buffer;
 // I2C/SPI variable ----------------------------------------------------------*/
 int16_t 	spi_dato,i2c_dato;
-uint16_t	spi_addres,i2c_addres;
+uint16_t	i2c_addres;
 // Analog sensor variable ----------------------------------------------------*/
 uint32_t 	analog_data = 0;
+// RX Buffer FIP -------------------------------------------------------------*/
+uint8_t* receivingBuffer;
+uint8_t* sendingBuffer;
+// FIP message variable ------------------------------------------------------*/
+FIPMessage* requestSensor, *response, *printTerminal;
+
+int stop = 0;
 
 /* Private function prototypes -----------------------------------------------*/
-/* Initialization private function -------------------------------------------*/
-void MX_GPIO_Init(void);
+static void MX_GPIO_Init(void);
 static void MX_I2C3_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_ADC1_Init(void);
 /* Logical private function --------------------------------------------------*/
 Bool 	 isValidID (uint8_t ID,uint16_t *index);
-//OP_STATE getSensorID (uint8_t ID,Sensor *sensor);
-
-
-
+float 	 fipRead   (Class_Type);
 
 //Prevedere delle funzioni che fanno il controllo iniziale della lista
+
 
 /*###############################################################################*/
 /* ------------- Private logical function implementation ------------------------*/
 /*###############################################################################*/
 
+/* Check if ID is valid ---------------------------------------------------------*/
 Bool isValidID (uint8_t ID,uint16_t *index)
 {
 	uint16_t i = 0;
@@ -53,6 +60,96 @@ Bool isValidID (uint8_t ID,uint16_t *index)
 			return TRUE;
 		}
 	return FALSE;
+}
+
+
+/* Read Data from CATA -----------------------------------------------------------*/
+float fipRead(Class_Type class)
+{
+	//Variable Declaration
+	uint8_t disp_res = 0;
+	int receivedBytes,packetSize;
+	float readData = 0;
+
+	SensorMessageParameters fipParamsSensor;
+	TerminalMessageParameters fipParamsTerminal;
+
+	fipParamsSensor.operation = sensor_one_read ;
+	switch(class){
+		case Position:
+			fipParamsSensor.sensorMask = SENSOR_MASK_PROXIMITY ;
+			break;
+		case Optical:
+			fipParamsSensor.sensorMask = SENSOR_MASK_LIGHT ;
+			break;
+		case Mechanical:
+			fipParamsSensor.sensorMask = SENSOR_MASK_ACCELERATOR_X ;
+			break;
+		case Electromagnetic:
+			fipParamsSensor.sensorMask = SENSOR_MASK_MAGNETIC_X;
+			break;
+		case Pressure:
+			fipParamsSensor.sensorMask = SENSOR_MASK_PRESSURE;
+			break;
+		case Humidity:
+			fipParamsSensor.sensorMask = SENSOR_HUMIDITY;
+			break;
+
+	}
+	createFIPSensorMessage(fipParamsSensor, &requestSensor);
+
+	fipParamsTerminal.operation = terminal_print;
+	fipParamsTerminal.text_buffer = (uint8_t*) malloc(256 * sizeof(uint8_t));
+
+	receivingBuffer = (uint8_t*) malloc(sizeof(uint8_t) * 64);
+	sendingBuffer   = (uint8_t*) malloc(sizeof(uint8_t) * 64);
+
+	packetSize 		= serializeFIPMessage(requestSensor, sendingBuffer);
+	VCP_write(sendingBuffer, packetSize);
+
+	while (disp_res != 1) {
+		receivedBytes = VCP_read(receivingBuffer, 64);
+		disp_res = dispatch(receivingBuffer, receivedBytes);
+	}
+
+	dequeueMessage(&response);
+
+	switch(class){
+		case Position:
+			readData = getProximity(response);
+			break;
+		case Optical:
+			readData = getLight(response);
+			break;
+		case Mechanical:
+			readData = getAcceleratorX(response);
+			break;
+		case Electromagnetic:
+			readData = getMagneticX(response);
+			break;
+		case Pressure:
+			readData = getPressure(response);
+			break;
+		case Humidity:
+			readData = getHumidity(response);
+			break;
+
+	}
+
+	fipParamsTerminal.text_lenght = sprintf(fipParamsTerminal.text_buffer,"Light Value: %f", getLight(response));
+
+	createFIPTerminalMessage(fipParamsTerminal, &printTerminal);
+	packetSize = serializeFIPMessage(printTerminal, sendingBuffer);
+	VCP_write(sendingBuffer, packetSize);
+
+
+	//dealocation
+	free(receivingBuffer);
+	free(sendingBuffer);
+	destroyFIPMessage(response);
+	destroyFIPMessage(printTerminal);
+
+	return readData;
 }
 
 
@@ -88,6 +185,15 @@ OP_STATE initSensors (void)
 	MX_ADC1_Init();
 #endif
 
+#ifdef FIP_SENSOR_ENABLED
+	USBD_Init(&USBD_Device, &VCP_Desc, 0);
+	USBD_RegisterClass(&USBD_Device, &USBD_CDC);
+	USBD_CDC_RegisterInterface(&USBD_Device, &USBD_CDC_Template_fops);
+	USBD_Start(&USBD_Device);
+	HAL_Delay(4000);
+
+	enableDispatching(); //Non ho capito bene a cosa serva sta funzione
+#endif
 
 //	uint16_t i = 0;
 //	for(i=0;i<SENSOR_NUMBER;i++){
@@ -98,6 +204,7 @@ OP_STATE initSensors (void)
 ////		sensorlist[i].period_ms		= conf_period[i];
 ////		sensorlist[i].dataread		= FALSE;
 
+//QUESTO PEZZO LO DEVO CAMBIARE ASSOLUTAMETNE
 	sensorlist[0].ID 			= ID_1;
 	sensorlist[0].sensor_class 	= CLASS_1;
 	sensorlist[0].link			= LINK_1;
@@ -105,28 +212,31 @@ OP_STATE initSensors (void)
 	sensorlist[0].period_ms		= PERIOD_1;
 	sensorlist[0].dataread		= FALSE;
 
-
-	sensorlist[1].ID 			= ID_2;
-	sensorlist[1].sensor_class 	= CLASS_2;
-	sensorlist[1].link			= LINK_2;
-	sensorlist[1].address		= ADDRESS_2;
-	sensorlist[1].period_ms		= PERIOD_2;
-	sensorlist[1].dataread		= FALSE;
-
-
-	sensorlist[2].ID 			= ID_3;
-	sensorlist[2].sensor_class 	= CLASS_3;
-	sensorlist[2].link			= LINK_3;
-	sensorlist[2].address		= ADDRESS_3;
-	sensorlist[2].period_ms		= PERIOD_3;
-	sensorlist[2].dataread		= FALSE;
-
+//
+//	sensorlist[1].ID 			= ID_2;
+//	sensorlist[1].sensor_class 	= CLASS_2;
+//	sensorlist[1].link			= LINK_2;
+//	sensorlist[1].address		= ADDRESS_2;
+//	sensorlist[1].period_ms		= PERIOD_2;
+//	sensorlist[1].dataread		= FALSE;
+//
+//
+//	sensorlist[2].ID 			= ID_3;
+//	sensorlist[2].sensor_class 	= CLASS_3;
+//	sensorlist[2].link			= LINK_3;
+//	sensorlist[2].address		= ADDRESS_3;
+//	sensorlist[2].period_ms		= PERIOD_3;
+//	sensorlist[2].dataread		= FALSE;
+//PEZZOTTO DA TOGLIERE
 
 #ifdef I2C_SENSOR_ENABLED
 	if(HAL_I2C_Slave_Receive_IT(&hi2c3,i2c_rx_buffer,sizeof(uint16_t)*2) != HAL_OK)
 	{
 		errorHandler();
-	}
+	}while (disp_res != 1) {
+		//			receivedBytes = VCP_read(receivingBuffer, 64);
+		//			disp_res = dispatch(receivingBuffer, receivedBytes);
+		//	}
 #endif
 
 #ifdef SPI_SENSOR_ENABLED
@@ -143,6 +253,7 @@ OP_STATE initSensors (void)
 		errorHandler();
 	}
 #endif
+
 
 	return OP_OK;
 }
@@ -174,7 +285,7 @@ OP_STATE readData (uint8_t ID,Data *data)
 
 
 	}else if(sensorlist[sensorID].link == CATE){
-		//To future implementation
+				sensorlist[sensorID].lastData.value = (int16_t) fipRead(sensorlist[sensorID].sensor_class);
 	}
 
 	return OP_OK;
@@ -265,7 +376,6 @@ void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
 		}
 	}
 
-	//BSP_LED_Toggle(LED3);
 	if(HAL_I2C_Slave_Receive_IT(&hi2c3,i2c_rx_buffer,sizeof(uint16_t)*2) != HAL_OK)
 	{
 		errorHandler();
@@ -389,6 +499,7 @@ void MX_ADC1_Init(void)
 
 #endif
 
+
 void MX_GPIO_Init()
 {
   /* GPIO Ports Clock Enable */
@@ -402,218 +513,7 @@ void MX_GPIO_Init()
 /*###############################################################################*/
 /*###############################################################################*/
 
-/*###############################################################################*/
-/*----.------------------- MSP Initialization Function --------------------------*/
-/*###############################################################################*/
 
-#ifdef I2C_SENSOR_ENABLED
-
-void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
-{
-
-  GPIO_InitTypeDef GPIO_InitStruct;
-  if(hi2c->Instance==I2C3)
-  {
-
-    /**I2C3 GPIO Configuration
-    PC9     ------> I2C3_SDA
-    PA8     ------> I2C3_SCL
-    */
-    GPIO_InitStruct.Pin 		= GPIO_PIN_9;
-    GPIO_InitStruct.Mode 		= GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull 		= GPIO_PULLUP;
-    GPIO_InitStruct.Speed 		= GPIO_SPEED_LOW;
-    GPIO_InitStruct.Alternate 	= GPIO_AF4_I2C3;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin 		= GPIO_PIN_8;
-    GPIO_InitStruct.Mode 		= GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull 		= GPIO_PULLUP;
-    GPIO_InitStruct.Speed 		= GPIO_SPEED_LOW;
-    GPIO_InitStruct.Alternate 	= GPIO_AF4_I2C3;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    /* Peripheral clock enable */
-    __I2C3_CLK_ENABLE();
-   /* System interrupt init*/
-    HAL_NVIC_SetPriority(I2C3_EV_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(I2C3_EV_IRQn);
-    HAL_NVIC_SetPriority(I2C3_ER_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(I2C3_ER_IRQn);
-  }
-
-}
-
-void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
-{
-
-  if(hi2c->Instance==I2C3)
-  {
-    /* Peripheral clock disable */
-    __I2C3_CLK_DISABLE();
-
-    /**I2C3 GPIO Configuration
-    PC9     ------> I2C3_SDA
-    PA8     ------> I2C3_SCL
-    */
-    HAL_GPIO_DeInit(GPIOC, GPIO_PIN_9);
-
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_8);
-
-    /* Peripheral interrupt DeInit*/
-    HAL_NVIC_DisableIRQ(I2C3_EV_IRQn);
-
-    HAL_NVIC_DisableIRQ(I2C3_ER_IRQn);
-  }
-
-}
-
-#endif
-
-#ifdef SPI_SENSOR_ENABLED
-
-void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
-{
-
-  GPIO_InitTypeDef GPIO_InitStruct;
-  if(hspi->Instance==SPI2)
-  {
-     /* Peripheral clock enable */
-    __SPI2_CLK_ENABLE();
-
-    /**SPI2 GPIO Configuration
-    PB13     ------> SPI1_SCK
-    PB14     ------> SPI1_MISO
-    PB15     ------> SPI1_MOSI
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
-    GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-    /* System interrupt init*/
-    HAL_NVIC_SetPriority(SPI2_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(SPI2_IRQn);
-    }
-
-}
-
-void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
-{
-
-  if(hspi->Instance==SPI2)
-  {
-	/* Peripheral clock disable */
-    __SPI2_CLK_DISABLE();
-
-    /**SPI2 GPIO Configuration
-    PB13     ------> SPI1_SCK
-    PB14     ------> SPI1_MISO
-    PB15     ------> SPI1_MOSI
-    */
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15);
-
-    /* Peripheral interrupt DeInit*/
-    HAL_NVIC_DisableIRQ(SPI2_IRQn);
-  }
-
-}
-
-#endif
-
-#ifdef ADC_SENSOR_ENABLED
-
-void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
-{
-
-  GPIO_InitTypeDef GPIO_InitStruct;
-  if(hadc->Instance==ADC1)
-  {
-      /* Peripheral clock enable */
-    __ADC1_CLK_ENABLE();
-
-    /**ADC1 GPIO Configuration
-    PA0-WKUP     ------> ADC1_IN0
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_1;
-    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-    /* System interrupt init*/
-    HAL_NVIC_SetPriority(ADC_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(ADC_IRQn);
-  }
-
-}
-
-void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
-{
-
-  if(hadc->Instance==ADC1)
-  {
-     /* Peripheral clock disable */
-    __ADC1_CLK_DISABLE();
-
-    /**ADC1 GPIO Configuration
-    PA0-WKUP     ------> ADC1_IN0
-    */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_0);
-
-    /* Peripheral interrupt DeInit*/
-    HAL_NVIC_DisableIRQ(ADC_IRQn);
-  }
-
-}
-
-#endif
-
-/*###############################################################################*/
-/*###############################################################################*/
-
-
-/*###############################################################################*/
-/*------------------------- CallBack Registration -------------------------------*/
-/*###############################################################################*/
-#ifdef I2C_SENSOR_ENABLED
-
-void I2C3_ER_IRQHandler(void)
-{
-  HAL_I2C_ER_IRQHandler(&hi2c3);
-}
-
-/**
-* @brief This function handles I2C1 event interrupt.
-*/
-void I2C3_EV_IRQHandler(void)
-{
-   HAL_I2C_EV_IRQHandler(&hi2c3);
-}
-
-#endif
-
-#ifdef SPI_SENSOR_ENABLED
-
-void SPI2_IRQHandler	(void)
-{
-	HAL_SPI_IRQHandler(&hspi2);
-
-}
-
-#endif
-
-#ifdef ADC_SENSOR_ENABLED
-
-void ADC_IRQHandler(void)
-{
-  HAL_ADC_IRQHandler(&hadc1);
-}
-
-#endif
-
-/*###############################################################################*/
-/*###############################################################################*/
 
 
 

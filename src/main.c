@@ -5,10 +5,7 @@
 
 // ----------------------------------------------------------------------------
 
-//#include <stdio.h>
-//#include "diag/Trace.h"
-//#include "stm32f4xx_hal.h"
-//#include "stm32f4_discovery.h"
+
 #include "gsi.h"
 // ----------------------------------------------------------------------------
 //
@@ -30,7 +27,7 @@
 #pragma GCC diagnostic ignored "-Wmissing-declarations"
 #pragma GCC diagnostic ignored "-Wreturn-type"
 
-
+//Modifica di prova
 
 /* Private variables ---------------------------------------------------------*/
 Data data;
@@ -54,7 +51,7 @@ int main(){
 	setup();
 	uint16_t i= 0,j = 0;
 	while(isLoop()){
-		if(readData	(ID_vector[(i%number)],&data) != OP_OK){
+		if(readData	(ID_vector[0],&data) != OP_OK){
 
 			errorHandler();
 		}
